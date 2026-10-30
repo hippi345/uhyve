@@ -124,13 +124,12 @@ pub fn run_simple_vm(kernel_path: PathBuf) -> VmResult {
 	run_vm(kernel_path, params)
 }
 
-/// Small wrapper around [`Uhyve::run`] with default parameters, but the
-/// memory size used is modifiable.
+/// Default [`Params`] for memory integration tests.
 ///
-/// Used in memory tests. Landlock is disabled because that is covered by tests
-/// utilizing other functions.
-pub fn run_vm_with_custom_memory(kernel_path: PathBuf, memory_size: u64) -> VmResult {
-	let params = Params {
+/// Landlock is disabled because that is covered by tests utilizing other
+/// functions.
+pub fn memory_test_params(memory_size: u64) -> Params {
+	Params {
 		cpu_count: 2.try_into().unwrap(),
 		memory_size: Byte::from_u64_with_unit(memory_size, Unit::MiB)
 			.unwrap()
@@ -141,8 +140,23 @@ pub fn run_vm_with_custom_memory(kernel_path: PathBuf, memory_size: u64) -> VmRe
 		#[cfg(target_os = "linux")]
 		file_isolation: FileSandboxMode::None,
 		..Default::default()
-	};
+	}
+}
 
+/// Small wrapper around [`Uhyve::run`] with default parameters, but the
+/// memory size used is modifiable.
+pub fn run_vm_with_custom_memory(kernel_path: PathBuf, memory_size: u64) -> VmResult {
+	run_vm(kernel_path, memory_test_params(memory_size))
+}
+
+/// Like [`run_vm_with_custom_memory`], but allows adjusting parameters before launch.
+pub fn run_vm_with_custom_memory_params(
+	kernel_path: PathBuf,
+	memory_size: u64,
+	configure: impl FnOnce(&mut Params),
+) -> VmResult {
+	let mut params = memory_test_params(memory_size);
+	configure(&mut params);
 	run_vm(kernel_path, params)
 }
 
